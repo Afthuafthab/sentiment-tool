@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis Web App</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 40px;
+            margin-top: 50px;
+        }
+        
+        .sentiment-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .sentiment-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .sentiment-positive {
+            border-left: 5px solid #28a745;
+        }
+        
+        .sentiment-negative {
+            border-left: 5px solid #dc3545;
+        }
+        
+        .sentiment-neutral {
+            border-left: 5px solid #ffc107;
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .spinner-border {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        
+        .github-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .demo-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <!-- GitHub Button -->
+    <a href="https://github.com/yourusername/sentiment-analysis-app" class="btn btn-dark github-btn" target="_blank">
+        <i class="fab fa-github"></i> GitHub
+    </a>
+    
+    <!-- Live Demo Button -->
+    <a href="#" class="btn btn-success demo-btn" target="_blank">
+        <i class="fas fa-external-link-alt"></i> Live Demo
+    </a>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="main-container">
+                    <h1 class="text-center text-white mb-4">
+                        <i class="fas fa-brain"></i> Sentiment Analysis
+                    </h1>
+                    <p class="text-center text-white-50 mb-4">
+                        Enter any text and let our AI analyze its sentiment
+                    </p>
+                    
+                    <div class="mb-4">
+                        <label for="textInput" class="form-label text-white">Enter your text:</label>
+                        <textarea 
+                            class="form-control" 
+                            id="textInput" 
+                            rows="4" 
+                            placeholder="Type or paste your text here..."
+                            maxlength="1000"
+                        ></textarea>
+                        <small class="text-white-50">
+                            <span id="charCount">0</span>/1000 characters
+                        </small>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary btn-analyze" id="analyzeBtn">
+                            <i class="fas fa-search"></i> Analyze Sentiment
+                        </button>
+                    </div>
+                    
+                    <div class="loading text-center mt-3">
+                        <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-white-50 mt-2">Analyzing sentiment...</p>
+                    </div>
+                    
+                    <div id="resultContainer" style="display: none;">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+                
+                <div class="footer text-center">
+                    <p>
+                        <i class="fas fa-heart text-danger"></i> 
+                        Built with Flask, NLTK, and Scikit-learn
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const textInput = document.getElementById('textInput');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const loading = document.querySelector('.loading');
+            const resultContainer = document.getElementById('resultContainer');
+            const charCount = document.getElementById('charCount');
+            
+            // Character counter
+            textInput.addEventListener('input', function() {
+                charCount.textContent = this.value.length;
+            });
+            
+            // Analyze button click
+            analyzeBtn.addEventListener('click', async function() {
+                const text = textInput.value.trim();
+                
+                if (!text) {
+                    alert('Please enter some text to analyze');
+                    return;
+                }
+                
+                // Show loading
+                loading.style.display = 'block';
+                analyzeBtn.disabled = true;
+                resultContainer.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        displayResult(data);
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                } finally {
+                    loading.style.display = 'none';
+                    analyzeBtn.disabled = false;
+                }
+            });
+            
+            // Display result
+            function displayResult(data) {
+                const sentiment = data.sentiment;
+                const confidence = Math.round(data.confidence * 100);
+                
+                let sentimentClass = '';
+                let sentimentIcon = '';
+                let sentimentColor = '';
+                
+                switch(sentiment.toLowerCase()) {
+                    case 'positive':
+                        sentimentClass = 'sentiment-positive';
+                        sentimentIcon = 'fas fa-smile text-success';
+                        sentimentColor = 'text-success';
+                        break;
+                    case 'negative':
+                        sentimentClass = 'sentiment-negative';
+                        sentimentIcon = 'fas fa-frown text-danger';
+                        sentimentColor = 'text-danger';
+                        break;
+                    case 'neutral':
+                        sentimentClass = 'sentiment-neutral';
+                        sentimentIcon = 'fas fa-meh text-warning';
+                        sentimentColor = 'text-warning';
+                        break;
+                }
+                
+                const resultHTML = `
+                    <div class="sentiment-card ${sentimentClass}">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="${sentimentIcon} fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-0 ${sentimentColor}">Sentiment: ${sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}</h5>
+                                <small class="text-muted">Confidence: ${confidence}%</small>
+                            </div>
+                        </div>
+                        <div class="border-top pt-3">
+                            <small class="text-muted">Original text:</small>
+                            <p class="mb-0">${data.text}</p>
+                        </div>
+                    </div>
+                `;
+                
+                resultContainer.innerHTML = resultHTML;
+                resultContainer.style.display = 'block';
+                
+                // Scroll to result
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // Allow Enter key to submit
+            textInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    analyzeBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
