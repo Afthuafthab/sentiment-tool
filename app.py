@@ -1,6 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import sys
+import nltk
+
+# Ensure punkt is available at runtime
+nltk.download("punkt")
+nltk.download("punkt_tab")  # explicitly download the missing resource
 
 # Add the current directory to the path so we can import our modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
