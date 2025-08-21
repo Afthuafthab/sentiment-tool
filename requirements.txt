@@ -36,3 +36,9 @@ tqdm==4.67.1
 typing_extensions==4.14.1
 tzdata==2025.2
 Werkzeug==2.3.7
+Flask
+gunicorn
+scikit-learn
+nltk
+setuptools
+wheel
